@@ -1,6 +1,6 @@
 name = "resolve"
 title = "DaVinci Resolve"
-version = "0.2.3-cb.2"
+version = "0.2.4-cb.1"
 
 client_dir = "ayon_resolve"
 
