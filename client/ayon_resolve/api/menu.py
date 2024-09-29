@@ -5,20 +5,10 @@ from qtpy import QtWidgets, QtCore, QtGui
 
 from ayon_core.tools.utils import host_tools
 from ayon_core.pipeline import registered_host
-
+from ayon_core.style import load_stylesheet
+from ayon_core.resources import get_ayon_icon_filepath
 
 MENU_LABEL = os.environ["AYON_MENU_LABEL"]
-
-
-def load_stylesheet():
-    path = os.path.join(os.path.dirname(__file__), "menu_style.qss")
-    if not os.path.exists(path):
-        print("Unable to load stylesheet, file not found in resources")
-        return ""
-
-    with open(path, "r") as file_stream:
-        stylesheet = file_stream.read()
-    return stylesheet
 
 
 class Spacer(QtWidgets.QWidget):
@@ -44,6 +34,10 @@ class AYONMenu(QtWidgets.QWidget):
 
         self.setObjectName(f"{MENU_LABEL}Menu")
 
+        icon_path = get_ayon_icon_filepath()
+        icon = QtGui.QIcon(icon_path)
+        self.setWindowIcon(icon)
+
         self.setWindowFlags(
             QtCore.Qt.Window
             | QtCore.Qt.CustomizeWindowHint
@@ -57,18 +51,17 @@ class AYONMenu(QtWidgets.QWidget):
         save_current_btn = QtWidgets.QPushButton("Save current file", self)
         workfiles_btn = QtWidgets.QPushButton("Workfiles ...", self)
         create_btn = QtWidgets.QPushButton("Create ...", self)
-        publish_btn = QtWidgets.QPushButton("Publish ...", self)
+        publish_btn = QtWidgets.QPushButton("Publish...", self)
         load_btn = QtWidgets.QPushButton("Load ...", self)
-        inventory_btn = QtWidgets.QPushButton("Manager ...", self)
-        subsetm_btn = QtWidgets.QPushButton("Subset Manager ...", self)
-        libload_btn = QtWidgets.QPushButton("Library ...", self)
+        inventory_btn = QtWidgets.QPushButton("Manage...", self)
+        libload_btn = QtWidgets.QPushButton("Library...", self)
         experimental_btn = QtWidgets.QPushButton(
             "Experimental tools ...", self
         )
         script_editor_btn = QtWidgets.QPushButton(
             "Script Editor ...", self
         )
-        # rename_btn = QtWidgets.QPushButton("Rename", self)
+
         # set_colorspace_btn = QtWidgets.QPushButton(
         #     "Set colorspace from presets", self
         # )
@@ -81,32 +74,23 @@ class AYONMenu(QtWidgets.QWidget):
 
         layout.addWidget(save_current_btn)
 
-        layout.addWidget(Spacer(15, self))
-
+        layout.addSpacing(15)
         layout.addWidget(workfiles_btn)
-        layout.addWidget(create_btn)
-        layout.addWidget(publish_btn)
-        layout.addWidget(load_btn)
-        layout.addWidget(inventory_btn)
-        layout.addWidget(subsetm_btn)
 
-        layout.addWidget(Spacer(15, self))
+        layout.addSpacing(15)
+
+        layout.addWidget(create_btn)
+        layout.addWidget(load_btn)
+        layout.addWidget(publish_btn)
+        layout.addWidget(inventory_btn)
+
+        layout.addSpacing(15)
 
         layout.addWidget(libload_btn)
 
-        # layout.addWidget(Spacer(15, self))
-
-        # layout.addWidget(rename_btn)
-
-        # layout.addWidget(Spacer(15, self))
-
-        # layout.addWidget(set_colorspace_btn)
-        # layout.addWidget(reset_resolution_btn)
-        layout.addWidget(Spacer(15, self))
+        layout.addSpacing(15)
         layout.addWidget(experimental_btn)
         layout.addWidget(script_editor_btn)
-
-        self.setLayout(layout)
 
         save_current_btn.clicked.connect(self.on_save_current_clicked)
         save_current_btn.setShortcut(QtGui.QKeySequence.Save)
@@ -115,13 +99,15 @@ class AYONMenu(QtWidgets.QWidget):
         publish_btn.clicked.connect(self.on_publish_clicked)
         load_btn.clicked.connect(self.on_load_clicked)
         inventory_btn.clicked.connect(self.on_inventory_clicked)
-        subsetm_btn.clicked.connect(self.on_subsetm_clicked)
         libload_btn.clicked.connect(self.on_libload_clicked)
-        # rename_btn.clicked.connect(self.on_rename_clicked)
-        # set_colorspace_btn.clicked.connect(self.on_set_colorspace_clicked)
-        # reset_resolution_btn.clicked.connect(self.on_set_resolution_clicked)
         experimental_btn.clicked.connect(self.on_experimental_clicked)
         script_editor_btn.clicked.connect(self.on_script_editor_clicked)
+
+        # set_colorspace_btn.clicked.connect(self.on_set_colorspace_clicked)
+        # reset_resolution_btn.clicked.connect(self.on_set_resolution_clicked)
+
+        # Resize width, make height as small fitting as possible
+        self.resize(200, 1)
 
     def on_save_current_clicked(self):
         host = registered_host()
@@ -141,11 +127,11 @@ class AYONMenu(QtWidgets.QWidget):
 
     def on_create_clicked(self):
         print("Clicked Create")
-        host_tools.show_creator()
+        host_tools.show_publisher(tab="create")
 
     def on_publish_clicked(self):
         print("Clicked Publish")
-        host_tools.show_publish(parent=None)
+        host_tools.show_publisher(tab="publish")
 
     def on_load_clicked(self):
         print("Clicked Load")
@@ -154,10 +140,6 @@ class AYONMenu(QtWidgets.QWidget):
     def on_inventory_clicked(self):
         print("Clicked Inventory")
         host_tools.show_scene_inventory()
-
-    def on_subsetm_clicked(self):
-        print("Clicked Subset Manager")
-        host_tools.show_subset_manager()
 
     def on_libload_clicked(self):
         print("Clicked Library")
