@@ -1,4 +1,3 @@
-import pprint
 import pyblish
 
 from ayon_resolve.api import lib
@@ -109,4 +108,3 @@ class CollectShot(pyblish.api.InstancePlugin):
         )
 
         self._inject_editorial_shared_data(instance)
-        self.log.debug(pprint.pformat(instance.data))

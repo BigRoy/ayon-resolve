@@ -8,7 +8,7 @@ from ayon_core.pipeline import (
     get_representation_path,
 )
 
-from ayon_resolve.api import lib
+from ayon_resolve.api import lib, constants
 from ayon_resolve.api.plugin import get_editorial_publish_data
 
 
@@ -33,6 +33,8 @@ class LoadEditorialPackage(load.LoaderPlugin):
         files = get_representation_path(context["representation"])
 
         search_folder_path = Path(files).parent / "resources"
+        if not search_folder_path.exists():
+            search_folder_path = Path(files).parent
 
         project = lib.get_current_project()
         media_pool = project.GetMediaPool()
@@ -65,7 +67,7 @@ class LoadEditorialPackage(load.LoaderPlugin):
             context, data)
 
         timeline_media_pool_item.SetMetadata(
-            lib.pype_tag_name, json.dumps(clip_data)
+            constants.AYON_TAG_NAME, json.dumps(clip_data)
         )
 
         # set clip color based on random choice
@@ -79,8 +81,22 @@ class LoadEditorialPackage(load.LoaderPlugin):
         print("Timeline imported: ", timeline)
 
     def update(self, container, context):
-        timeline_mp_clip = container["_item"]
-        timeline_mp_clip.SetMetadata(lib.pype_tag_name, "")
+        """Update the container with the latest version."""
+
+        # Get the latest version of the container data
+        timeline_media_pool_item = container["_item"]
+        clip_data = timeline_media_pool_item.GetMetadata(
+            constants.AYON_TAG_NAME)
+        clip_data = json.loads(clip_data)
+
+        clip_data["load"] = {}
+
+        # update publish key in publish container data to be False
+        if clip_data["publish"]["publish"] is True:
+            clip_data["publish"]["publish"] = False
+
+        timeline_media_pool_item.SetMetadata(
+            constants.AYON_TAG_NAME, json.dumps(clip_data))
 
         self.load(
             context,
@@ -128,6 +144,8 @@ class LoadEditorialPackage(load.LoaderPlugin):
             folder_path=context["folder"]["path"],
             product_name=context["product"]["name"],
             version=version_entity["version"],
+            task=context["representation"]["context"].get("task", {}).get(
+                "name"),
         )
 
         return data

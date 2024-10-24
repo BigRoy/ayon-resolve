@@ -1,4 +1,3 @@
-import pprint
 import pyblish
 
 
@@ -23,5 +22,3 @@ class CollectPlate(pyblish.api.InstancePlugin):
         instance.data.update(
             edit_shared_data[parent_instance_id]
         )
-
-        self.log.debug(pprint.pformat(instance.data))

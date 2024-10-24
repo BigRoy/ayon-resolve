@@ -1,5 +1,4 @@
 import copy
-import os
 import re
 import uuid
 
@@ -9,7 +8,7 @@ from ayon_core.pipeline.constants import AVALON_INSTANCE_ID
 from ayon_core.pipeline import (
     LoaderPlugin,
     Creator,
-    HiddenCreator,    
+    HiddenCreator,
     Anatomy
 )
 
@@ -134,16 +133,9 @@ class ClipLoader:
         # create project bin for the media to be imported into
         self.active_bin = lib.create_bin(self.data["binPath"])
 
-        # create mediaItem in active project bin
-
-        # make sure files list is not empty and first available file exists
-        filepath = next((f for f in files if os.path.isfile(f)), None)
-        if not filepath:
-            raise FileNotFoundError("No file found in input files list")
-
         # create clip media
         media_pool_item = lib.create_media_pool_item(
-            filepath,
+            files,
             self.active_bin
         )
         _clip_property = media_pool_item.GetClipProperty
@@ -507,6 +499,7 @@ class PublishableClip:
         self.product_type = get("productType") or self.product_type_default
         self.vertical_sync = get("vSyncOn") or self.vertical_sync_default
         self.hero_track = get("vSyncTrack") or self.driving_layer_default
+        self.hero_track = self.hero_track.replace(" ", "_")
         self.review_media_track = (
             get("reviewTrack") or self.review_track_default)
 
@@ -705,7 +698,8 @@ class ResolvePublishCreator(Creator):
 def get_editorial_publish_data(
     folder_path,
     product_name,
-    version=None
+    version=None,
+    task=None,
 ) -> dict:
     """Get editorial publish data from context.
 
@@ -713,20 +707,26 @@ def get_editorial_publish_data(
         folder_path (str): Folder path where editorial package is located.
         product_name (str): Editorial product name.
         version (Optional[str]): Editorial product version. Defaults to None.
+        task (Optional[str]): Associated task name. Defaults to None (no task).
 
     Returns:
         dict: Editorial publish data.
     """
     data = {
         "id": AVALON_INSTANCE_ID,
+        "family": "editorial_pkg",
         "productType": "editorial_pkg",
         "productName": product_name,
         "folderPath": folder_path,
         "active": True,
+        "publish": True,
     }
 
     if version:
         data["version"] = version
+
+    if task:
+        data["task"] = task
 
     return data
 

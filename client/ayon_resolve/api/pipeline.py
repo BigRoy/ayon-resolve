@@ -100,9 +100,11 @@ class ResolveHost(HostBase, IWorkfileHost, ILoadHost, IPublishHost):
         return ls()
 
     def get_context_data(self):
+        # TODO: implement to support persisting context attributes
         return {}
 
     def update_context_data(self, data, changes):
+        # TODO: implement to support persisting context attributes
         pass
 
 
@@ -162,7 +164,15 @@ def ls():
         data = clip.GetMetadata(constants.AYON_TAG_NAME)
         if not data:
             continue
-        data = json.loads(data)
+
+        try:
+            data = json.loads(data)
+        except json.JSONDecodeError:
+            log.warning(
+                f"Failed to parse json data from media pool item: "
+                f"{clip.GetName()}"
+            )
+            continue
 
         # treat data as container
         # There might be cases where clip's metadata are having additional

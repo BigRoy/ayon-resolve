@@ -72,18 +72,58 @@ def maintain_current_timeline(to_timeline: object,
         >>> print(get_current_timeline().GetName())
         timeline1
     """
-    resolve_project = get_current_resolve_project()
-    working_timeline = from_timeline or resolve_project.GetCurrentTimeline()
+    project = get_current_resolve_project()
+    working_timeline = from_timeline or project.GetCurrentTimeline()
 
-    # switch to the input timeline
-    resolve_project.SetCurrentTimeline(to_timeline)
+    # search timeline withing project timelines in case the
+    # to_timeline is MediaPoolItem
+    # Note: this is a hacky way of identifying if object is timeline since
+    #   mediapool item is not having AddTrack attribute. API is not providing
+    #   any other way to identify the object type. And hasattr is returning
+    #   false info.
+    if "AddTrack" not in dir(to_timeline):
+        tcount = project.GetTimelineCount()
+        for idx in range(0, int(tcount)):
+            timeline = project.GetTimelineByIndex(idx + 1)
+            if timeline.GetName() == to_timeline.GetName():
+                to_timeline = timeline
+                break
 
     try:
-        # do a work
-        yield
+        # switch to the input timeline
+        result = project.SetCurrentTimeline(to_timeline)
+        if not result:
+            raise ValueError(f"Failed to switch to timeline: {to_timeline}")
+
+        current_timeline = project.GetCurrentTimeline()
+        yield current_timeline
     finally:
         # put the original working timeline to context
-        resolve_project.SetCurrentTimeline(working_timeline)
+        project.SetCurrentTimeline(working_timeline)
+
+
+@contextlib.contextmanager
+def maintain_page_by_name(page_name):
+    """Maintain specific page by name.
+
+    Args:
+        page_name (str): name of the page
+
+    Example:
+        >>> with maintain_page_by_name("Deliver"):
+        ...     print("Deliver page is open")
+        Deliver page is open
+    """
+    from . import bmdvr
+    current_page = bmdvr.GetCurrentPage()
+
+    if not bmdvr.OpenPage(page_name):
+        raise ValueError(f"Could not open page {page_name}")
+
+    try:
+        yield
+    finally:
+        bmdvr.OpenPage(current_page)
 
 
 def get_project_manager():
@@ -236,45 +276,41 @@ def remove_media_pool_item(media_pool_item: object) -> bool:
     return media_pool.DeleteClips([media_pool_item])
 
 
-def create_media_pool_item(fpath: str,
+def create_media_pool_item(files: list,
                            root: object = None) -> object:
     """ Create media pool item.
 
     Args:
-        fpath (str): absolute path to a file
+        files (list): absolute path to a file
         root (resolve.Folder)[optional]: root folder / bin object
 
     Returns:
         object: resolve.MediaPoolItem
     """
     # get all variables
-    media_storage = get_media_storage()
     resolve_project = get_current_resolve_project()
     media_pool = resolve_project.GetMediaPool()
     root_bin = root or media_pool.GetRootFolder()
 
+    # make sure files list is not empty and first available file exists
+    filepath = next((f for f in files if os.path.isfile(f)), None)
+    if not filepath:
+        raise FileNotFoundError("No file found in input files list")
+
     # try to search in bin if the clip does not exist
-    existing_mpi = get_media_pool_item(fpath, root_bin)
+    existing_mpi = get_media_pool_item(filepath, root_bin)
 
     if existing_mpi:
         return existing_mpi
 
-    dirname, file = os.path.split(fpath)
-    _name, ext = os.path.splitext(file)
-
-    # add all data in folder to media-pool
-    media_pool_items = media_storage.AddItemListToMediaPool(
-        os.path.normpath(dirname))
+    # add media to media-pool
+    media_pool_items = media_pool.ImportMedia(files)
 
     if not media_pool_items:
         return False
 
-    # if any are added then look into them for the right extension
-    media_pool_item = [mpi for mpi in media_pool_items
-                       if ext in mpi.GetClipProperty("File Path")]
-
     # return only first found
-    return media_pool_item.pop()
+    return media_pool_items.pop()
 
 
 def get_media_pool_item(filepath, root: object = None) -> object:
@@ -1080,7 +1116,6 @@ def export_timeline_otio_to_file(timeline, filepath):
         otio_export.write_to_file(otio_timeline, filepath)
 
 
-
 def export_timeline_otio(timeline):
     """ Export timeline as otio.
 
@@ -1152,3 +1187,38 @@ def iter_all_media_pool_clips(root=None):
         for clip in folder.GetClipList():
             yield clip
         queue.extend(folder.GetSubFolderList())
+
+
+def export_timeline_otio_native(timeline, filepath):
+    """Get timeline otio filepath.
+
+    Only supported from Resolve 19.5
+
+    Example:
+        # Native otio export is available from Resolve 18.5
+        # [major, minor, patch, build, suffix]
+        resolve_version = bmdvr.GetVersion()
+        if resolve_version[0] < 18 or resolve_version[1] < 5:
+            # if it is lower then use ayon's otio exporter
+            otio_timeline = davinci_export.create_otio_timeline(
+                resolve_project, timeline=timeline)
+            davinci_export.write_to_file(otio_timeline, filepath)
+        else:
+            # use native otio export
+            export_timeline_otio_native(timeline, filepath)
+
+    Args:
+        timeline (resolve.Timeline): resolve's object
+        filepath (str): otio file path
+
+    Returns:
+        bool: True if success
+    """
+    from . import bmdvr
+
+    try:
+        timeline.Export(filepath, bmdvr.EXPORT_OTIO)
+    except Exception as e:
+        log.error(f"Failed to export timeline otio: {e}")
+        return False
+    return True
