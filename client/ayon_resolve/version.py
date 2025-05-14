@@ -1,3 +1,3 @@
 # -*- coding: utf-8 -*-
 """Package declaring AYON addon 'resolve' version."""
-__version__ = "0.3.0+cb.2"
+__version__ = "0.4.1+cb.1"
