@@ -158,12 +158,14 @@ class AYONMenu(QtWidgets.QWidget):
         host_tools.show_experimental_tools_dialog()
 
     def on_script_editor_clicked(self):
-        from ayon_core.modules.python_console_interpreter.window import (
-            PythonInterpreterWidget
+        from ayon_core.tools.console_interpreter.ui import (
+            ConsoleInterpreterWindow
         )
-        widget = PythonInterpreterWidget(parent=self)
-        widget.setWindowFlags(widget.windowFlags() | QtCore.Qt.Dialog)
-        widget.show()
+        window = ConsoleInterpreterWindow(parent=self)
+        window.setWindowFlags(window.windowFlags() | QtCore.Qt.Dialog)
+        window.show()
+        window.raise_()
+        window.activateWindow()
 
 
 def launch_ayon_menu():
